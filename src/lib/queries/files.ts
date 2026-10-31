@@ -2,16 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   MAX_UPLOAD_BYTES,
   PDF_BUCKET,
-  UPLOAD_TIMEOUT_MS,
   baseName,
   describeUploadError,
   downloadBlob,
   isPdf,
   ownedPath,
   removeFiles,
-  uploadFile,
-  withTimeout,
 } from '../storage'
+import { percentOf, uploadResumable } from '../resumableUpload'
 import { requireSupabase } from '../supabase'
 import type { PatternFile } from '../types'
 
@@ -57,14 +55,17 @@ export function usePdfBlob(path: string | undefined) {
 
 export class UploadError extends Error {}
 
+/** 올리는 중인 파일의 진행 상황 (몇 번째 파일인지와 퍼센트) */
+export type FileProgress = { name: string; index: number; count: number; percent: number }
+
 /** 고른 PDF들을 올리고 도안에 붙인다. 하나라도 실패하면 어떤 파일이었는지 메시지에 담는다. */
 export function useUploadPatternFiles(patternId: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (files: File[]) => {
+    mutationFn: async ({ files, onProgress }: { files: File[]; onProgress?: (p: FileProgress) => void }) => {
       const db = requireSupabase()
       const failures: string[] = []
-      for (const file of files) {
+      for (const [index, file] of files.entries()) {
         if (!isPdf(file)) {
           failures.push(`${file.name} (PDF가 아니에요)`)
           continue
@@ -75,7 +76,15 @@ export function useUploadPatternFiles(patternId: string) {
         }
         try {
           const path = await ownedPath(patternId, `${crypto.randomUUID()}.pdf`)
-          await withTimeout(uploadFile(PDF_BUCKET, path, file, 'application/pdf'), UPLOAD_TIMEOUT_MS)
+          onProgress?.({ name: file.name, index, count: files.length, percent: 0 })
+          await uploadResumable({
+            bucket: PDF_BUCKET,
+            path,
+            file,
+            contentType: 'application/pdf',
+            onProgress: (p) =>
+              onProgress?.({ name: file.name, index, count: files.length, percent: percentOf(p.loaded, p.total) }),
+          })
           const { error } = await db.from('pattern_files').insert({
             pattern_id: patternId,
             storage_path: path,

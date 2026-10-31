@@ -1,7 +1,13 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { formatBytes } from '../lib/makes'
-import { useDeletePatternFile, usePatternFiles, useUpdatePatternFile, useUploadPatternFiles } from '../lib/queries/files'
+import {
+  useDeletePatternFile,
+  usePatternFiles,
+  useUpdatePatternFile,
+  useUploadPatternFiles,
+  type FileProgress,
+} from '../lib/queries/files'
 import type { PatternFile } from '../lib/types'
 import { Field, SheetActions, inputClass } from './Field'
 import { ChevronRightIcon, PlusIcon } from './icons'
@@ -45,6 +51,7 @@ export default function PatternFiles({
   const upload = useUploadPatternFiles(patternId)
   const inputRef = useRef<HTMLInputElement>(null)
   const [editing, setEditing] = useState<PatternFile | null>(null)
+  const [progress, setProgress] = useState<FileProgress | null>(null)
 
   const href = (f: PatternFile) => `/pdf/${f.id}${makeId ? `?make=${makeId}` : ''}`
 
@@ -63,7 +70,7 @@ export default function PatternFiles({
               className="flex min-h-11 items-center gap-1 text-sm font-semibold text-primary disabled:opacity-60"
             >
               <PlusIcon width={16} height={16} strokeWidth={2.4} />
-              {upload.isPending ? '올리는 중…' : 'PDF 추가'}
+              {upload.isPending ? `올리는 중 ${progress?.percent ?? 0}%` : 'PDF 추가'}
             </button>
             <input
               ref={inputRef}
@@ -74,12 +81,29 @@ export default function PatternFiles({
               onChange={(e) => {
                 const picked = [...(e.target.files ?? [])]
                 e.target.value = ''
-                if (picked.length > 0) upload.mutate(picked)
+                if (picked.length === 0) return
+                setProgress(null)
+                upload.mutate({ files: picked, onProgress: setProgress })
               }}
             />
           </>
         )}
       </div>
+
+      {upload.isPending && (
+        <div role="status" className="flex flex-col gap-1.5 rounded-xl bg-primary-soft px-4 py-3">
+          <div className="flex items-center justify-between gap-3 text-[13px]">
+            <span className="min-w-0 truncate font-semibold text-primary">{progress?.name ?? '준비하는 중…'}</span>
+            <span className="flex-none text-primary tabular-nums">
+              {progress ? `${progress.index + 1}/${progress.count} · ${progress.percent}%` : ''}
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full bg-white">
+            <div className="h-1.5 rounded-full bg-primary transition-[width]" style={{ width: `${progress?.percent ?? 0}%` }} />
+          </div>
+          <p className="text-xs text-muted">화면을 닫지 말고 기다려 주세요. 연결이 끊기면 자동으로 다시 이어서 올려요.</p>
+        </div>
+      )}
 
       {upload.isError && (
         <p role="alert" className="rounded-xl bg-[#fbeceb] px-4 py-3 text-sm whitespace-pre-line text-danger">
