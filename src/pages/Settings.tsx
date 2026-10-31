@@ -1,4 +1,7 @@
+import { useState } from 'react'
+import { backupFilename, downloadText, exportAll } from '../lib/backup'
 import { useAuth } from '../lib/auth'
+import { getWakeLockDefault, setWakeLockDefault } from '../lib/useWakeLock'
 
 const installSteps = [
   'Safari로 이 주소를 열고 아래쪽 공유 버튼을 눌러요',
@@ -8,6 +11,21 @@ const installSteps = [
 
 export default function Settings() {
   const { session, signOut } = useAuth()
+  const [wakeLock, setWakeLock] = useState(getWakeLockDefault)
+  const [backingUp, setBackingUp] = useState(false)
+  const [backupError, setBackupError] = useState<string | null>(null)
+
+  async function onBackup() {
+    setBackingUp(true)
+    setBackupError(null)
+    try {
+      downloadText(backupFilename(), await exportAll())
+    } catch {
+      setBackupError('백업하지 못했어요. 잠시 뒤에 다시 시도해 주세요.')
+    } finally {
+      setBackingUp(false)
+    }
+  }
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-5 pt-6 pb-8">
@@ -27,6 +45,50 @@ export default function Settings() {
             </li>
           ))}
         </ol>
+        <p className="text-[13px] text-muted">PC는 크롬이나 엣지 주소창 오른쪽의 설치 아이콘으로 설치할 수 있어요.</p>
+      </section>
+
+      <section aria-labelledby="general" className="flex flex-col">
+        <h2 id="general" className="mb-1 text-[13px] font-semibold text-muted">
+          일반
+        </h2>
+        <label className="flex min-h-[60px] items-center justify-between gap-4 border-b border-hair">
+          <span>
+            <span className="block text-[15px]">PDF 화면 켜짐 유지</span>
+            <span className="mt-0.5 block text-[13px] text-muted">PDF를 보는 동안 화면이 꺼지지 않아요</span>
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={wakeLock}
+            onChange={(e) => {
+              setWakeLock(e.target.checked)
+              setWakeLockDefault(e.target.checked)
+            }}
+            className="size-6 flex-none accent-primary"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => void onBackup()}
+          disabled={backingUp}
+          className="flex min-h-[60px] items-center justify-between gap-4 border-b border-hair text-left disabled:opacity-60"
+        >
+          <span>
+            <span className="block text-[15px]">{backingUp ? '백업 만드는 중…' : '백업 파일 내려받기'}</span>
+            <span className="mt-0.5 block text-[13px] text-muted">
+              모든 기록을 JSON 파일로 저장해요 (PDF와 사진 파일은 빠져요)
+            </span>
+          </span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="flex-none text-muted">
+            <path d="M12 4v11M7 11l5 5 5-5M5 20h14" />
+          </svg>
+        </button>
+        {backupError && (
+          <p role="alert" className="pt-2 text-sm text-danger">
+            {backupError}
+          </p>
+        )}
       </section>
 
       <section aria-labelledby="account" className="flex flex-col gap-2.5">
