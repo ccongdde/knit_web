@@ -2,12 +2,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   MAX_UPLOAD_BYTES,
   PDF_BUCKET,
+  UPLOAD_TIMEOUT_MS,
   baseName,
+  describeUploadError,
   downloadBlob,
   isPdf,
   ownedPath,
   removeFiles,
   uploadFile,
+  withTimeout,
 } from '../storage'
 import { requireSupabase } from '../supabase'
 import type { PatternFile } from '../types'
@@ -70,9 +73,9 @@ export function useUploadPatternFiles(patternId: string) {
           failures.push(`${file.name} (50MB가 넘어요)`)
           continue
         }
-        const path = await ownedPath(patternId, `${crypto.randomUUID()}.pdf`)
         try {
-          await uploadFile(PDF_BUCKET, path, file, 'application/pdf')
+          const path = await ownedPath(patternId, `${crypto.randomUUID()}.pdf`)
+          await withTimeout(uploadFile(PDF_BUCKET, path, file, 'application/pdf'), UPLOAD_TIMEOUT_MS)
           const { error } = await db.from('pattern_files').insert({
             pattern_id: patternId,
             storage_path: path,
@@ -84,8 +87,8 @@ export function useUploadPatternFiles(patternId: string) {
             await removeFiles(PDF_BUCKET, [path]).catch(() => undefined)
             throw error
           }
-        } catch {
-          failures.push(`${file.name} (올리지 못했어요)`)
+        } catch (e) {
+          failures.push(`${file.name}: ${describeUploadError(e)}`)
         }
       }
       if (failures.length > 0) throw new UploadError(failures.join('\n'))
