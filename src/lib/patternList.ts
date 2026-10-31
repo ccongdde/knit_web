@@ -65,6 +65,13 @@ export function allTags(items: PatternListItem[]): string[] {
     .map(([tag]) => tag)
 }
 
+/** 도안 목록 썸네일로 쓸 사진 경로: 가장 최근에 고친 제작 기록의 대표 사진 */
+export function coverPathOf(item: PatternListItem): string | null {
+  const withCover = item.makes.filter((m) => m.cover?.storage_path)
+  withCover.sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? ''))
+  return withCover[0]?.cover?.storage_path ?? null
+}
+
 const SWATCHES: [string, string][] = [
   ['#9DB8A5', '#F1EFE8'],
   ['#D9C7A8', '#F6F2EA'],

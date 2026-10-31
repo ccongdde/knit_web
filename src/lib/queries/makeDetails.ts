@@ -101,14 +101,15 @@ export function useDeleteMakeNeedle(makeId: string) {
 
 export type WorkNoteWithPhotos = WorkNote & { photos: Pick<Photo, 'id' | 'storage_path' | 'caption' | 'taken_at'>[] }
 
-export function useWorkNotes(makeId: string) {
+export function useWorkNotes(makeId: string | undefined) {
   return useQuery({
     queryKey: ['work_notes', makeId],
+    enabled: Boolean(makeId),
     queryFn: async (): Promise<WorkNoteWithPhotos[]> => {
       const { data, error } = await requireSupabase()
         .from('work_notes')
         .select('*,photos(id,storage_path,caption,taken_at)')
-        .eq('make_id', makeId)
+        .eq('make_id', makeId!)
         .order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as WorkNoteWithPhotos[]

@@ -8,10 +8,10 @@ export function usePatterns() {
     queryFn: async (): Promise<PatternListItem[]> => {
       const { data, error } = await requireSupabase()
         .from('patterns')
-        .select('id,title,source,tags,updated_at,makes(id,status)')
+        .select('id,title,source,tags,updated_at,makes(id,status,updated_at,cover:photos!makes_cover_photo_fk(storage_path))')
         .order('updated_at', { ascending: false })
       if (error) throw error
-      return (data ?? []) as PatternListItem[]
+      return (data ?? []) as unknown as PatternListItem[]
     },
   })
 }

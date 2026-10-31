@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AppShell from './components/AppShell'
 import RequireAuth from './components/RequireAuth'
@@ -11,10 +12,23 @@ import PatternForm from './pages/PatternForm'
 import PatternList from './pages/PatternList'
 import Settings from './pages/Settings'
 
+// PDF 그리기 도구는 무거워서 PDF를 열 때만 내려받는다.
+const PdfViewer = lazy(() => import('./pages/PdfViewer'))
+
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route
+        path="pdf/:fileId"
+        element={
+          <RequireAuth>
+            <Suspense fallback={<p className="p-10 text-center text-sm text-muted">불러오는 중…</p>}>
+              <PdfViewer />
+            </Suspense>
+          </RequireAuth>
+        }
+      />
       <Route
         element={
           <RequireAuth>

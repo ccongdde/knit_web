@@ -1,14 +1,17 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeftIcon, PlusIcon } from '../components/icons'
 import MakeRow from '../components/MakeRow'
+import PatternFiles from '../components/PatternFiles'
 import { useMakes } from '../lib/queries/makes'
 import { usePattern } from '../lib/queries/patterns'
+import { usePhotoUrls } from '../lib/queries/photos'
 
 export default function PatternDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: pattern, isLoading, error } = usePattern(id)
   const { data: makes } = useMakes(id)
+  const { data: coverUrls } = usePhotoUrls((makes ?? []).map((m) => m.cover?.storage_path).filter((p): p is string => !!p))
 
   return (
     <div className="mx-auto flex min-h-full max-w-3xl flex-col">
@@ -78,6 +81,8 @@ export default function PatternDetail() {
               </section>
             )}
 
+            <PatternFiles patternId={pattern.id} />
+
             <section aria-labelledby="makes" className="flex flex-col">
               <div className="mb-1 flex items-center justify-between">
                 <h2 id="makes" className="text-[13px] font-semibold text-muted">
@@ -96,7 +101,13 @@ export default function PatternDetail() {
                 </p>
               )}
               {makes?.map((m, i) => (
-                <MakeRow key={m.id} make={m} index={i} patternTitle={pattern.title} />
+                <MakeRow
+                  key={m.id}
+                  make={m}
+                  index={i}
+                  patternTitle={pattern.title}
+                  coverUrl={m.cover ? coverUrls?.get(m.cover.storage_path) : undefined}
+                />
               ))}
             </section>
           </div>

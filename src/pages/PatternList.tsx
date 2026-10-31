@@ -4,8 +4,10 @@ import { PlusIcon, SearchIcon } from '../components/icons'
 import PatternThumb from '../components/PatternThumb'
 import StatusChip from '../components/StatusChip'
 import { formatYearMonth } from '../lib/format'
+import { usePhotoUrls } from '../lib/queries/photos'
 import {
   allTags,
+  coverPathOf,
   filterPatterns,
   hasStatus,
   sortPatterns,
@@ -51,6 +53,7 @@ export default function PatternList() {
     () => sortPatterns(filterPatterns(items, { query, status, tag }), sort),
     [items, query, status, tag, sort],
   )
+  const { data: coverUrls } = usePhotoUrls(items.map(coverPathOf).filter((p): p is string => p !== null))
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col">
@@ -167,7 +170,7 @@ export default function PatternList() {
         {visible.map((p) => (
           <li key={p.id}>
             <Link to={`/patterns/${p.id}`} className="flex items-center gap-3.5 border-b border-hair px-5 py-3">
-              <PatternThumb title={p.title} />
+              <PatternThumb title={p.title} src={coverUrls?.get(coverPathOf(p) ?? '')} />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-bold">{p.title}</div>
                 <div className="mt-[3px] truncate text-[13px] text-muted">
