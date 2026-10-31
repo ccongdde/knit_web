@@ -43,4 +43,3 @@ npm run dev
 | `npm run dev` | 개발 서버 |
 | `npm run build` | 타입 검사 + 배포용 빌드 |
 | `npm test` | 단위 테스트 |
-| `node scripts/make-icons.mjs` | 앱 아이콘 다시 만들기 |
