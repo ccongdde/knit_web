@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -12,6 +12,52 @@ pdfjs.GlobalWorkerOptions.workerSrc = workerSrc
 const GAP = 12
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 3
+/** 보이는 쪽 앞뒤로 미리 그려 두는 쪽 수 */
+const PRELOAD_BEHIND = 1
+const PRELOAD_AHEAD = 2
+/** 한 쪽의 캔버스 가로 픽셀 상한. 확대해도 이 이상으로는 그리지 않아서 스크롤이 무거워지지 않는다. */
+const MAX_CANVAS_PX = 1800
+
+const DOCUMENT_OPTIONS = {}
+
+type Viewport = { width: number; height: number }
+
+/** 한 쪽. memo 덕분에 스크롤 중에도 그릴 필요가 바뀐 쪽만 다시 그려진다. */
+const PdfPage = memo(function PdfPage({
+  n,
+  width,
+  ratio,
+  dpr,
+  render,
+  onFirstPage,
+}: {
+  n: number
+  width: number
+  ratio: number
+  dpr: number
+  render: boolean
+  onFirstPage: (v: Viewport) => void
+}) {
+  return (
+    <div
+      data-page={n}
+      className="mb-3 flex-none bg-white"
+      style={{ width, height: width * ratio, contain: 'strict' }}
+    >
+      {render && (
+        <Page
+          pageNumber={n}
+          width={width}
+          devicePixelRatio={dpr}
+          renderTextLayer={false}
+          renderAnnotationLayer={false}
+          loading={null}
+          onLoadSuccess={n === 1 ? (p) => onFirstPage(p.getViewport({ scale: 1 })) : undefined}
+        />
+      )}
+    </div>
+  )
+})
 
 /** 도안 PDF를 앱 안에서 직접 그려서 보여준다. (아이폰 Safari는 기본 PDF 보기가 첫 페이지만 보여줘서 쓰지 않는다.) */
 export default function PdfViewer() {
@@ -30,34 +76,55 @@ export default function PdfViewer() {
   const [numPages, setNumPages] = useState(0)
   const [page, setPage] = useState(1)
   const [ratio, setRatio] = useState(1.414)
-  const [scrollTop, setScrollTop] = useState(0)
-  const [viewHeight, setViewHeight] = useState(800)
+  const [range, setRange] = useState({ first: 1, last: 3 })
   const [awake, setAwake] = useState(getWakeLockDefault)
   useWakeLock(awake)
 
-  // 화면 폭에 맞춘 기본 쪽 너비
+  // 확대 단추를 연달아 눌러도 화면은 바로 반응하고, 무거운 다시 그리기는 한 박자 뒤에 한 번만 한다.
+  const settledZoom = useDeferredValue(zoom)
+
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    const measure = () => {
-      setBoxWidth(el.clientWidth)
-      setViewHeight(el.clientHeight)
-    }
+    const measure = () => setBoxWidth(el.clientWidth)
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
   }, [blob])
 
-  const pageWidth = Math.max(240, Math.min(boxWidth - 24, 900)) * zoom
+  const pageWidth = Math.round(Math.max(240, Math.min(boxWidth - 24, 900)) * settledZoom)
   const stride = pageWidth * ratio + GAP
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1, MAX_CANVAS_PX / Math.max(1, pageWidth)))
+
+  // 스크롤 처리에 필요한 값은 ref로 들고 있어서 스크롤 핸들러가 매번 새로 만들어지지 않게 한다.
+  const live = useRef({ stride, numPages })
+  live.current = { stride, numPages }
+  const raf = useRef(0)
+
+  const update = useCallback(() => {
+    const el = scrollRef.current
+    const { stride: s, numPages: total } = live.current
+    if (!el || total === 0) return
+    const top = el.scrollTop
+    const first = Math.max(1, Math.floor(top / s) + 1 - PRELOAD_BEHIND)
+    const last = Math.min(total, Math.ceil((top + el.clientHeight) / s) + PRELOAD_AHEAD)
+    // 값이 같으면 같은 객체를 돌려줘서 다시 그리지 않는다.
+    setRange((r) => (r.first === first && r.last === last ? r : { first, last }))
+    setPage(Math.min(total, Math.max(1, Math.floor((top + el.clientHeight / 3) / s) + 1)))
+  }, [])
 
   const onScroll = useCallback(() => {
-    const el = scrollRef.current
-    if (!el) return
-    setScrollTop(el.scrollTop)
-    setPage(Math.min(numPages || 1, Math.max(1, Math.floor((el.scrollTop + el.clientHeight / 3) / stride) + 1)))
-  }, [numPages, stride])
+    if (raf.current) return
+    raf.current = requestAnimationFrame(() => {
+      raf.current = 0
+      update()
+    })
+  }, [update])
+
+  useEffect(() => () => cancelAnimationFrame(raf.current), [])
+  // 확대·축소나 쪽 크기가 바뀌면 보이는 범위를 다시 계산한다.
+  useEffect(() => update(), [stride, numPages, update])
 
   function goTo(target: number) {
     const el = scrollRef.current
@@ -66,11 +133,27 @@ export default function PdfViewer() {
     el.scrollTo({ top: (next - 1) * stride, behavior: 'smooth' })
   }
 
-  // 지금 보이는 쪽 앞뒤만 실제로 그려서 메모리를 아낀다.
-  const firstVisible = Math.max(1, Math.floor(scrollTop / stride) + 1 - 1)
-  const lastVisible = Math.min(numPages, Math.ceil((scrollTop + viewHeight) / stride) + 1)
+  const onFirstPage = useCallback((v: Viewport) => setRatio(v.height / v.width), [])
 
-  const pages = useMemo(() => Array.from({ length: numPages }, (_, i) => i + 1), [numPages])
+  const pages = useMemo(
+    () =>
+      Array.from({ length: numPages }, (_, i) => {
+        const n = i + 1
+        return (
+          <PdfPage
+            key={n}
+            n={n}
+            width={pageWidth}
+            ratio={ratio}
+            dpr={dpr}
+            render={n >= range.first && n <= range.last}
+            onFirstPage={onFirstPage}
+          />
+        )
+      }),
+    [numPages, pageWidth, ratio, dpr, range, onFirstPage],
+  )
+
   const title = file?.label || file?.filename || 'PDF'
 
   return (
@@ -92,7 +175,11 @@ export default function PdfViewer() {
         )}
       </header>
 
-      <div ref={scrollRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-auto px-3 pb-40">
+      <div
+        ref={scrollRef}
+        onScroll={onScroll}
+        className="min-h-0 flex-1 overflow-auto overscroll-contain px-3 pb-40"
+      >
         {(fileLoading || blobLoading) && <p className="py-16 text-center text-sm text-[#a8acb5]">불러오는 중…</p>}
         {error && (
           <p role="alert" className="py-16 text-center text-sm text-[#ff9b8c]">
@@ -108,35 +195,14 @@ export default function PdfViewer() {
             error={<p className="py-16 text-center text-sm text-[#ff9b8c]">이 PDF는 열 수 없어요.</p>}
             onLoadSuccess={({ numPages: n }) => {
               setNumPages(n)
+              setRange({ first: 1, last: Math.min(n, 1 + PRELOAD_AHEAD) })
               if (file && file.page_count !== n) updateFile.mutate({ id: file.id, patch: { page_count: n } })
             }}
-            className="flex flex-col items-center"
-            // 아래 두 값은 객체를 새로 만들면 문서를 다시 읽으므로 고정한다.
+            // 객체를 새로 만들면 문서를 다시 읽으므로 고정해 둔다.
             options={DOCUMENT_OPTIONS}
+            className="flex flex-col items-center"
           >
-            {pages.map((n) => (
-              <div
-                key={n}
-                data-page={n}
-                className="mb-3 flex-none bg-white"
-                style={{ width: pageWidth, minHeight: pageWidth * ratio }}
-              >
-                {n >= firstVisible && n <= lastVisible && (
-                  <Page
-                    pageNumber={n}
-                    width={pageWidth}
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                    onLoadSuccess={(p) => {
-                      if (n === 1) {
-                        const v = p.getViewport({ scale: 1 })
-                        setRatio(v.height / v.width)
-                      }
-                    }}
-                  />
-                )}
-              </div>
-            ))}
+            {pages}
           </Document>
         )}
       </div>
@@ -180,8 +246,6 @@ export default function PdfViewer() {
   )
 }
 
-const DOCUMENT_OPTIONS = {}
-
 function ToolButton({
   label,
   onClick,
@@ -191,7 +255,7 @@ function ToolButton({
   label: string
   onClick: () => void
   disabled?: boolean
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return (
     <button
