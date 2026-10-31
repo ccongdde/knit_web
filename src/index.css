@@ -1,0 +1,44 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', 'Noto Sans KR', system-ui, sans-serif;
+
+  --color-ink: #1b1c20;
+  --color-muted: #6b6f78;
+  --color-line: #ececf0;
+  --color-hair: #f0f0f3;
+  --color-surface: #f5f6f8;
+  --color-edge: #d9dbe2;
+
+  --color-primary: #2e4a7d;
+  --color-primary-soft: #e6ecf7;
+  --color-done: #3f6b50;
+  --color-done-soft: #e8f0ea;
+  --color-planned: #7a5f2a;
+  --color-planned-soft: #f3ede2;
+  --color-paused: #5f6368;
+  --color-paused-soft: #efeff1;
+  --color-danger: #b4412f;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #fff;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
