@@ -4,7 +4,7 @@ import { requireSupabase } from '../supabase'
 import type { Make, MakeInput, MakeNeedle, MakeWithStats } from '../types'
 
 const MAKE_STATS_SELECT =
-  '*,counters(label,value,target,sort_order),make_yarns(grams_used),cover:photos!makes_cover_photo_fk(storage_path)'
+  '*,counters(label,value,target,sort_order),make_yarns(grams_used),cover:photos!makes_cover_photo_fk(storage_path,thumb_path)'
 
 /** 한 도안의 제작 기록 (만든 순서대로, 목록에 쓸 카운터·실 사용량·대표 사진 포함) */
 export function useMakes(patternId: string | undefined) {

@@ -20,6 +20,7 @@
 ### 1. Supabase 프로젝트 만들기
 1. [supabase.com](https://supabase.com) 에서 프로젝트를 새로 만들어요 (무료 플랜).
 2. **SQL Editor** 에 `supabase/migrations/0001_init.sql` 내용을 통째로 붙여 넣고 실행해요.
+   이후 기능이 늘어날 때마다 `0002_cover_images.sql` 처럼 번호가 큰 파일을 순서대로 한 번씩 더 실행해요. (여러 번 실행해도 괜찮아요.)
 3. **Authentication > Users > Add user** 로 내 계정을 만들어요 (이메일 + 비밀번호, "Auto Confirm User" 체크).
 4. **Authentication > Sign In / Providers > Email** 에서 **"Allow new users to sign up"** 을 꺼요. 다른 사람이 가입하지 못하게 하려는 거예요.
 5. **Project Settings > API** 에서 `Project URL` 과 `anon public` 키를 확인해요. `service_role` 키는 절대 쓰지 않아요.

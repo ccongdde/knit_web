@@ -55,15 +55,21 @@ export function useUploadPhotos(makeId: string) {
           }
           const prepared = await prepareImage(file)
           if (prepared.blob.size > MAX_UPLOAD_BYTES) throw new Error('too large')
-          const path = await ownedPath(makeId, `${crypto.randomUUID()}.${prepared.ext}`)
-          await uploadFile(PHOTO_BUCKET, path, prepared.blob, prepared.type)
+          const name = crypto.randomUUID()
+          const path = await ownedPath(makeId, `${name}.${prepared.ext}`)
+          const thumbPath = prepared.thumb ? await ownedPath(makeId, `${name}_t.jpg`) : null
+          // 큰 사진과 작은 썸네일을 함께 올린다. 작은 것은 목록에서 빨리 뜨게 하려는 것이다.
+          await Promise.all([
+            uploadFile(PHOTO_BUCKET, path, prepared.blob, prepared.type),
+            prepared.thumb && thumbPath ? uploadFile(PHOTO_BUCKET, thumbPath, prepared.thumb, 'image/jpeg') : undefined,
+          ])
           const { data, error } = await db
             .from('photos')
-            .insert({ make_id: makeId, note_id: noteId ?? null, storage_path: path })
+            .insert({ make_id: makeId, note_id: noteId ?? null, storage_path: path, thumb_path: thumbPath })
             .select('id')
             .single()
           if (error) {
-            await removeFiles(PHOTO_BUCKET, [path]).catch(() => undefined)
+            await removeFiles(PHOTO_BUCKET, [path, ...(thumbPath ? [thumbPath] : [])]).catch(() => undefined)
             throw error
           }
           createdIds.push(data.id as string)
@@ -114,7 +120,9 @@ export function useDeletePhoto(makeId: string) {
       const db = requireSupabase()
       const { error } = await db.from('photos').delete().eq('id', photo.id)
       if (error) throw error
-      await removeFiles(PHOTO_BUCKET, [photo.storage_path]).catch(() => undefined)
+      await removeFiles(PHOTO_BUCKET, [photo.storage_path, ...(photo.thumb_path ? [photo.thumb_path] : [])]).catch(
+        () => undefined,
+      )
 
       const { data: make } = await db.from('makes').select('cover_photo_id').eq('id', makeId).single()
       if (make && !make.cover_photo_id) {

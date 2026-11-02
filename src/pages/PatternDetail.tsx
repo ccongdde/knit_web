@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeftIcon, PlusIcon } from '../components/icons'
 import MakeRow from '../components/MakeRow'
+import PatternCoverSheet from '../components/PatternCoverSheet'
+import PatternThumb from '../components/PatternThumb'
 import PatternFiles from '../components/PatternFiles'
 import { useMakes } from '../lib/queries/makes'
 import { usePattern } from '../lib/queries/patterns'
@@ -11,7 +14,9 @@ export default function PatternDetail() {
   const navigate = useNavigate()
   const { data: pattern, isLoading, error } = usePattern(id)
   const { data: makes } = useMakes(id)
-  const { data: coverUrls } = usePhotoUrls((makes ?? []).map((m) => m.cover?.storage_path).filter((p): p is string => !!p))
+  const [coverOpen, setCoverOpen] = useState(false)
+  const { data: ownCoverUrls } = usePhotoUrls(pattern?.cover_path ? [pattern.cover_path] : [])
+  const { data: coverUrls } = usePhotoUrls((makes ?? []).map((m) => m.cover?.thumb_path ?? m.cover?.storage_path).filter((p): p is string => !!p))
 
   return (
     <div className="mx-auto flex min-h-full max-w-3xl flex-col">
@@ -46,7 +51,26 @@ export default function PatternDetail() {
       {pattern && (
         <>
           <div className="flex flex-1 flex-col gap-5 px-5 pt-1 pb-6">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex items-start gap-4">
+              <button
+                type="button"
+                onClick={() => setCoverOpen(true)}
+                aria-label="대표 이미지 정하기"
+                className="relative flex-none rounded-xl"
+              >
+                <PatternThumb
+                  title={pattern.title}
+                  size={84}
+                  src={pattern.cover_path ? ownCoverUrls?.get(pattern.cover_path) : undefined}
+                />
+                <span className="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full bg-primary text-white shadow">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+                    <circle cx="12" cy="13" r="3.5" />
+                  </svg>
+                </span>
+              </button>
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <h1 className="text-2xl font-bold">{pattern.title}</h1>
               {pattern.source && <div className="text-sm text-muted">{pattern.source}</div>}
               {pattern.tags.length > 0 && (
@@ -58,6 +82,7 @@ export default function PatternDetail() {
                   ))}
                 </ul>
               )}
+              </div>
             </div>
 
             <section aria-labelledby="note" className="flex flex-col gap-2">
@@ -106,7 +131,7 @@ export default function PatternDetail() {
                   make={m}
                   index={i}
                   patternTitle={pattern.title}
-                  coverUrl={m.cover ? coverUrls?.get(m.cover.storage_path) : undefined}
+                  coverUrl={m.cover ? coverUrls?.get(m.cover.thumb_path ?? m.cover.storage_path) : undefined}
                 />
               ))}
             </section>
@@ -120,6 +145,7 @@ export default function PatternDetail() {
               새 제작 시작
             </Link>
           </div>
+          {coverOpen && <PatternCoverSheet pattern={pattern} onClose={() => setCoverOpen(false)} />}
         </>
       )}
     </div>

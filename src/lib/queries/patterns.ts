@@ -8,7 +8,7 @@ export function usePatterns() {
     queryFn: async (): Promise<PatternListItem[]> => {
       const { data, error } = await requireSupabase()
         .from('patterns')
-        .select('id,title,source,tags,updated_at,makes(id,status,updated_at,cover:photos!makes_cover_photo_fk(storage_path))')
+        .select('id,title,source,tags,cover_path,updated_at,makes(id,status,updated_at,cover:photos!makes_cover_photo_fk(storage_path,thumb_path))')
         .order('updated_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as unknown as PatternListItem[]
@@ -23,7 +23,7 @@ export function usePattern(id: string | undefined) {
     queryFn: async (): Promise<PatternDetail | null> => {
       const { data, error } = await requireSupabase()
         .from('patterns')
-        .select('id,title,source,tags,pattern_note,pattern_gauge,created_at,updated_at')
+        .select('id,title,source,tags,pattern_note,pattern_gauge,cover_path,created_at,updated_at')
         .eq('id', id!)
         .maybeSingle()
       if (error) throw error

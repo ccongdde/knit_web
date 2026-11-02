@@ -65,11 +65,16 @@ export function allTags(items: PatternListItem[]): string[] {
     .map(([tag]) => tag)
 }
 
-/** 도안 목록 썸네일로 쓸 사진 경로: 가장 최근에 고친 제작 기록의 대표 사진 */
+/**
+ * 도안 목록 썸네일로 쓸 사진 경로.
+ * 도안에 직접 정한 대표 이미지가 먼저이고, 없으면 가장 최근에 고친 제작 기록의 대표 사진(작은 것이 있으면 작은 것)을 쓴다.
+ */
 export function coverPathOf(item: PatternListItem): string | null {
+  if (item.cover_path) return item.cover_path
   const withCover = item.makes.filter((m) => m.cover?.storage_path)
   withCover.sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? ''))
-  return withCover[0]?.cover?.storage_path ?? null
+  const cover = withCover[0]?.cover
+  return cover ? (cover.thumb_path ?? cover.storage_path) : null
 }
 
 const SWATCHES: [string, string][] = [

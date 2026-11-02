@@ -16,7 +16,14 @@ export type PatternListItem = {
   source: string | null
   tags: string[]
   updated_at: string
-  makes: { id: string; status: MakeStatus; updated_at?: string; cover?: { storage_path: string } | null }[]
+  /** 도안에 직접 정한 대표 이미지 (작은 JPEG 경로) */
+  cover_path: string | null
+  makes: {
+    id: string
+    status: MakeStatus
+    updated_at?: string
+    cover?: { storage_path: string; thumb_path: string | null } | null
+  }[]
 }
 
 export type PatternDetail = {
@@ -26,6 +33,7 @@ export type PatternDetail = {
   tags: string[]
   pattern_note: string
   pattern_gauge: string | null
+  cover_path: string | null
   created_at: string
   updated_at: string
 }
@@ -72,7 +80,7 @@ export type Make = {
 export type MakeWithStats = Make & {
   counters: { label: string; value: number; target: number | null; sort_order: number }[]
   make_yarns: { grams_used: number }[]
-  cover: { storage_path: string } | null
+  cover: { storage_path: string; thumb_path: string | null } | null
 }
 
 export type MakeInput = {
@@ -121,6 +129,8 @@ export type Photo = {
   make_id: string
   note_id: string | null
   storage_path: string
+  /** 목록에서 쓰는 작은 사진 (예전 사진은 없을 수 있다) */
+  thumb_path: string | null
   caption: string | null
   kind: 'progress' | 'finished' | 'reference'
   taken_at: string

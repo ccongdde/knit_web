@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   allTags,
+  coverPathOf,
   filterPatterns,
   hasStatus,
   matchesQuery,
@@ -16,6 +17,7 @@ const item = (over: Partial<PatternListItem> = {}): PatternListItem => ({
   title: '라글란 가디건',
   source: '○○ 디자이너',
   tags: ['가디건', '울'],
+  cover_path: null,
   updated_at: '2025-10-01T00:00:00Z',
   makes: [],
   ...over,
@@ -103,5 +105,31 @@ describe('filterPatterns / sortPatterns / allTags', () => {
 describe('swatchFor', () => {
   it('같은 제목은 같은 색', () => {
     expect(swatchFor('라글란 가디건')).toEqual(swatchFor('라글란 가디건'))
+  })
+})
+
+describe('coverPathOf', () => {
+  it('도안에 정한 대표 이미지가 가장 먼저', () => {
+    const p = item({
+      cover_path: 'u/covers/p1/a.jpg',
+      makes: [{ id: 'm', status: 'finished', updated_at: '2025-05-01T00:00:00Z', cover: { storage_path: 'big.jpg', thumb_path: 'small.jpg' } }],
+    })
+    expect(coverPathOf(p)).toBe('u/covers/p1/a.jpg')
+  })
+  it('없으면 가장 최근 제작의 대표 사진, 작은 것이 있으면 작은 것', () => {
+    const p = item({
+      makes: [
+        { id: 'a', status: 'finished', updated_at: '2025-01-01T00:00:00Z', cover: { storage_path: 'old.jpg', thumb_path: null } },
+        { id: 'b', status: 'finished', updated_at: '2025-06-01T00:00:00Z', cover: { storage_path: 'new.jpg', thumb_path: 'new_t.jpg' } },
+      ],
+    })
+    expect(coverPathOf(p)).toBe('new_t.jpg')
+  })
+  it('작은 사진이 없던 예전 사진은 큰 것을 쓴다', () => {
+    const p = item({ makes: [{ id: 'a', status: 'finished', cover: { storage_path: 'old.jpg', thumb_path: null } }] })
+    expect(coverPathOf(p)).toBe('old.jpg')
+  })
+  it('아무것도 없으면 null', () => {
+    expect(coverPathOf(item())).toBeNull()
   })
 })

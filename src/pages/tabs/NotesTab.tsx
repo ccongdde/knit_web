@@ -13,7 +13,7 @@ export default function NotesTab({ makeId }: { makeId: string }) {
   const { data: counters } = useCounters(makeId)
   const { data: make } = useMake(makeId)
   const { data: photos } = usePhotos(makeId)
-  const { data: urls } = usePhotoUrls((photos ?? []).map((p) => p.storage_path))
+  const { data: urls } = usePhotoUrls((photos ?? []).flatMap((p) => (p.thumb_path ? [p.storage_path, p.thumb_path] : [p.storage_path])))
   const save = useSaveNote(makeId)
   const upload = useUploadPhotos(makeId)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -176,8 +176,8 @@ export default function NotesTab({ makeId }: { makeId: string }) {
                         onClick={() => setViewer({ photos: notePhotos, index: pi })}
                         className="size-16 overflow-hidden rounded-lg bg-surface"
                       >
-                        {urls?.get(p.storage_path) && (
-                          <img src={urls.get(p.storage_path)} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+                        {urls?.get(p.thumb_path ?? p.storage_path) && (
+                          <img src={urls.get(p.thumb_path ?? p.storage_path)} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
                         )}
                       </button>
                     ))}
