@@ -24,6 +24,12 @@ export function durationDays(start: string | null, end: string | null, today: st
   return Math.max(0, diff)
 }
 
+/** 완성일이 시작일보다 빠르면 안내 문구를, 괜찮으면 null 을 돌려준다. 한쪽이 비어 있으면 검사하지 않는다. */
+export function validateDates(start: string | null, end: string | null): string | null {
+  if (start && end && end < start) return '완성일이 시작일보다 빨라요. 날짜를 확인해 주세요.'
+  return null
+}
+
 /** "2025.09.14" 형태로 보여준다 */
 export function dotDate(iso: string | null): string {
   return iso ? iso.replaceAll('-', '.') : '-'

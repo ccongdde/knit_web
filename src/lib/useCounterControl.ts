@@ -45,7 +45,8 @@ export function useCounterControl(counter: Counter | undefined, makeId: string) 
     queryClient.setQueryData<Counter[]>(['counters', makeId], (old) =>
       old?.map((c) => (c.id === target.id ? { ...c, value: next } : c)),
     )
-    void queryClient.invalidateQueries({ queryKey: ['makes'] })
+    // 카운터를 한 번 누를 때마다 목록을 다시 받으면 느려진다. 목록은 "오래됨"으로만 표시하고, 다음에 열 때 새로 받는다.
+    void queryClient.invalidateQueries({ queryKey: ['makes'], refetchType: 'none' })
   }, [makeId, queryClient])
 
   const set = useCallback(

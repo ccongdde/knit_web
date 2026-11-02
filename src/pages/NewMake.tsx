@@ -1,10 +1,10 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { CloseIcon } from '../components/icons'
-import { makeTitle, todayIso } from '../lib/makes'
+import { makeTitle, todayIso, validateDates } from '../lib/makes'
 import { useCreateMake, useMakes } from '../lib/queries/makes'
 import { usePattern } from '../lib/queries/patterns'
-import type { MakeWithStats } from '../lib/types'
+import type { MakeStatus, MakeWithStats } from '../lib/types'
 
 export default function NewMake() {
   const { id: patternId } = useParams()
@@ -25,13 +25,24 @@ function Body({ patternId, patternTitle, makes }: { patternId: string; patternTi
   const [mode, setMode] = useState<'copy' | 'blank'>(hasPrevious ? 'copy' : 'blank')
   const [copyFromId, setCopyFromId] = useState(makes[makes.length - 1]?.id ?? '')
   const [size, setSize] = useState('')
+  const [status, setStatus] = useState<MakeStatus>('in_progress')
   const [startedAt, setStartedAt] = useState(todayIso())
+  const [finishedAt, setFinishedAt] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const source = makes.find((m) => m.id === copyFromId)
+  const planned = status === 'planned'
+  const finished = status === 'finished'
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
+    const started = planned ? null : startedAt || null
+    const ended = finished ? finishedAt || null : null
+    const problem = validateDates(started, ended)
+    if (problem) {
+      setError(problem)
+      return
+    }
     setError(null)
     try {
       const id = await create.mutateAsync({
@@ -39,11 +50,11 @@ function Body({ patternId, patternTitle, makes }: { patternId: string; patternTi
         copyFromId: mode === 'copy' && copyFromId ? copyFromId : undefined,
         input: {
           label: label.trim() || null,
-          status: 'in_progress',
+          status,
           size_made: size.trim() || null,
           actual_gauge: null,
-          started_at: startedAt || null,
-          finished_at: null,
+          started_at: started,
+          finished_at: ended,
           review_note: '',
         },
       })
@@ -136,26 +147,63 @@ function Body({ patternId, patternTitle, makes }: { patternId: string; patternTi
           </div>
         )}
 
-        <div className="flex gap-3">
-          <Field label="사이즈" htmlFor="size" className="flex-1">
-            <input
-              id="size"
-              value={size}
-              onChange={(e) => setSize(e.target.value)}
-              placeholder={mode === 'copy' && source?.size_made ? source.size_made : '예: M'}
-              className="h-[50px] w-full rounded-xl bg-surface px-4 text-[15px]"
-            />
-          </Field>
-          <Field label="시작일" htmlFor="started" className="flex-1">
-            <input
-              id="started"
-              type="date"
-              value={startedAt}
-              onChange={(e) => setStartedAt(e.target.value)}
-              className="h-[50px] w-full rounded-xl bg-surface px-3.5 text-[15px]"
-            />
-          </Field>
-        </div>
+        <Field label="상태" htmlFor="status">
+          <select
+            id="status"
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value as MakeStatus)
+              setError(null)
+            }}
+            className="h-[50px] w-full rounded-xl bg-surface px-3.5 text-[15px]"
+          >
+            <option value="in_progress">진행 중 (지금 뜨고 있어요)</option>
+            <option value="finished">완성 (이미 다 뜬 것을 기록해요)</option>
+            <option value="planned">예정 (아직 시작 전이에요)</option>
+            <option value="paused">보류</option>
+          </select>
+        </Field>
+
+        <Field label="사이즈" htmlFor="size">
+          <input
+            id="size"
+            value={size}
+            onChange={(e) => setSize(e.target.value)}
+            placeholder={mode === 'copy' && source?.size_made ? source.size_made : '예: M'}
+            className="h-[50px] w-full rounded-xl bg-surface px-4 text-[15px]"
+          />
+        </Field>
+
+        {!planned && (
+          <div className="flex gap-3">
+            <Field label="시작일" htmlFor="started" className="flex-1">
+              <input
+                id="started"
+                type="date"
+                value={startedAt}
+                onChange={(e) => {
+                  setStartedAt(e.target.value)
+                  setError(null)
+                }}
+                className="h-[50px] w-full rounded-xl bg-surface px-3.5 text-[15px]"
+              />
+            </Field>
+            {finished && (
+              <Field label="완성일" htmlFor="finished" className="flex-1">
+                <input
+                  id="finished"
+                  type="date"
+                  value={finishedAt}
+                  onChange={(e) => {
+                    setFinishedAt(e.target.value)
+                    setError(null)
+                  }}
+                  className="h-[50px] w-full rounded-xl bg-surface px-3.5 text-[15px]"
+                />
+              </Field>
+            )}
+          </div>
+        )}
 
         {error && (
           <p role="alert" className="text-sm text-danger">
@@ -170,7 +218,7 @@ function Body({ patternId, patternTitle, makes }: { patternId: string; patternTi
           disabled={create.isPending}
           className="min-h-[52px] w-full rounded-xl bg-primary text-base font-semibold text-white disabled:opacity-60"
         >
-          {create.isPending ? '만드는 중…' : '제작 시작'}
+          {create.isPending ? '만드는 중…' : finished ? '기록하기' : '제작 시작'}
         </button>
       </div>
     </form>

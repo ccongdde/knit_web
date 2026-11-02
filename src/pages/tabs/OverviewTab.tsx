@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import NeedleSheet from '../../components/NeedleSheet'
 import YarnSheet from '../../components/YarnSheet'
 import YarnSwatch from '../../components/YarnSwatch'
-import { dotDate, durationDays, formatGrams, sumGrams, todayIso } from '../../lib/makes'
+import { durationDays, formatGrams, sumGrams, todayIso, validateDates } from '../../lib/makes'
 import { useYarnStock } from '../../lib/queries/inventory'
 import { useMakeNeedles, useMakeYarns } from '../../lib/queries/makeDetails'
+import { useUpdateMake } from '../../lib/queries/makes'
 import type { Make, MakeNeedle, MakeYarn } from '../../lib/types'
 
 type Editing = { kind: 'yarn'; item?: MakeYarn } | { kind: 'needle'; item?: MakeNeedle } | null
@@ -16,6 +17,18 @@ export default function OverviewTab({ make }: { make: Make }) {
   const { data: needles } = useMakeNeedles(make.id)
   const { data: stock } = useYarnStock()
   const [editing, setEditing] = useState<Editing>(null)
+  const [dateError, setDateError] = useState<string | null>(null)
+  const update = useUpdateMake()
+
+  /** 시작일·완성일을 고친다. 순서가 맞지 않으면 저장하지 않고 안내한다. */
+  function commitDate(patch: { started_at?: string | null; finished_at?: string | null; status?: 'finished' }) {
+    const started = 'started_at' in patch ? (patch.started_at ?? null) : make.started_at
+    const finished = 'finished_at' in patch ? (patch.finished_at ?? null) : make.finished_at
+    const problem = validateDates(started, finished)
+    setDateError(problem)
+    if (problem) return
+    update.mutate({ id: make.id, patch })
+  }
 
   return (
     <div className="flex flex-col gap-6 px-5 pt-5 pb-6">
@@ -23,8 +36,23 @@ export default function OverviewTab({ make }: { make: Make }) {
         <h2 id="schedule" className="mb-1.5 text-[13px] font-semibold text-muted">
           일정
         </h2>
-        <Row label="시작일" value={dotDate(make.started_at)} />
-        <Row label="완성일" value={dotDate(make.finished_at)} />
+        <DateRow
+          label="시작일"
+          value={make.started_at}
+          onCommit={(v) => commitDate({ started_at: v })}
+          conflict={validateDates(make.started_at, make.finished_at)}
+        />
+        <DateRow
+          label="완성일"
+          value={make.finished_at}
+          onCommit={(v) => commitDate(v ? { finished_at: v, status: 'finished' } : { finished_at: null })}
+          clearable
+        />
+        {dateError && (
+          <p role="alert" className="py-1 text-sm text-danger">
+            {dateError}
+          </p>
+        )}
         <Row label="기간" value={durationLabel} />
         <Row label="사이즈" value={make.size_made || '-'} />
         <Row label="내 게이지" value={make.actual_gauge || '-'} />
@@ -135,6 +163,58 @@ export default function OverviewTab({ make }: { make: Make }) {
         <NeedleSheet makeId={make.id} needle={editing.item} onClose={() => setEditing(null)} />
       )}
     </div>
+  )
+}
+
+/**
+ * 날짜를 그 자리에서 고치는 줄. 날짜 선택 창에서 값이 여러 번 바뀌어도 서버에는 마지막 값만 한 번 보낸다.
+ * 서버 값이 바뀌면(다른 곳에서 고쳤거나 되돌려졌을 때) 화면 값도 따라간다.
+ */
+function DateRow({
+  label,
+  value,
+  onCommit,
+  clearable,
+  conflict,
+}: {
+  label: string
+  value: string | null
+  onCommit: (value: string | null) => void
+  clearable?: boolean
+  conflict?: string | null
+}) {
+  const [draft, setDraft] = useState(value ?? '')
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const latest = useRef(onCommit)
+  latest.current = onCommit
+
+  useEffect(() => setDraft(value ?? ''), [value])
+  useEffect(() => () => void (timer.current && clearTimeout(timer.current)), [])
+
+  function change(next: string) {
+    setDraft(next)
+    if (timer.current) clearTimeout(timer.current)
+    timer.current = setTimeout(() => latest.current(next || null), 700)
+  }
+
+  return (
+    <label className="flex min-h-11 items-center justify-between gap-3">
+      <span className="text-sm text-muted">{label}</span>
+      <span className="flex items-center gap-1">
+        {clearable && draft && (
+          <button type="button" onClick={() => change('')} className="min-h-11 px-2 text-[13px] text-muted">
+            지우기
+          </button>
+        )}
+        <input
+          type="date"
+          value={draft}
+          onChange={(e) => change(e.target.value)}
+          aria-invalid={Boolean(conflict)}
+          className="h-10 rounded-lg bg-surface px-2.5 text-[15px]"
+        />
+      </span>
+    </label>
   )
 }
 

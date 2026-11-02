@@ -23,14 +23,32 @@ export function useMakes(patternId: string | undefined) {
   })
 }
 
+/**
+ * 제작 기록 한 건과, 화면 위쪽에 필요한 도안 정보(이름, 도안 메모, 같은 도안의 제작 순서, PDF 개수)를
+ * 한 번의 요청으로 가져온다. 요청을 여러 번 이어서 하면 서버 응답을 그만큼 기다려야 해서 느려진다.
+ */
+export type MakeBundle = Make & {
+  pattern: {
+    id: string
+    title: string
+    pattern_note: string
+    makes: { id: string; created_at: string }[]
+    pattern_files: { id: string }[]
+  } | null
+}
+
 export function useMake(id: string | undefined) {
   return useQuery({
     queryKey: ['make', id],
     enabled: Boolean(id),
-    queryFn: async (): Promise<Make | null> => {
-      const { data, error } = await requireSupabase().from('makes').select('*').eq('id', id!).maybeSingle()
+    queryFn: async (): Promise<MakeBundle | null> => {
+      const { data, error } = await requireSupabase()
+        .from('makes')
+        .select('*,pattern:patterns(id,title,pattern_note,makes(id,created_at),pattern_files(id))')
+        .eq('id', id!)
+        .maybeSingle()
       if (error) throw error
-      return data as Make | null
+      return data as unknown as MakeBundle | null
     },
   })
 }
@@ -77,15 +95,15 @@ export function useCreateMake() {
       if (error) throw error
       const makeId = data.id as string
 
-      const { error: counterError } = await db.from('counters').insert({ make_id: makeId, label: '단수', value: 0 })
-      if (counterError) throw counterError
-
-      if (draftNeedles.length > 0) {
-        const { error: needleError } = await db
-          .from('make_needles')
-          .insert(draftNeedles.map((n) => ({ ...n, make_id: makeId })))
-        if (needleError) throw needleError
-      }
+      // 카운터와 바늘 복사는 서로 기다릴 필요가 없어서 함께 보낸다.
+      const [counterResult, needleResult] = await Promise.all([
+        db.from('counters').insert({ make_id: makeId, label: '단수', value: 0 }),
+        draftNeedles.length > 0
+          ? db.from('make_needles').insert(draftNeedles.map((n) => ({ ...n, make_id: makeId })))
+          : Promise.resolve({ error: null }),
+      ])
+      if (counterResult.error) throw counterResult.error
+      if (needleResult.error) throw needleResult.error
       return makeId
     },
     onSuccess: (_id, { patternId }) => {
@@ -95,17 +113,33 @@ export function useCreateMake() {
   })
 }
 
+type MakePatch = Partial<MakeInput> & { cover_photo_id?: string | null }
+
+/**
+ * 제작 기록을 고친다. 서버 응답을 기다리지 않고 화면에 먼저 반영하고(상태, 날짜가 바로 바뀐다),
+ * 실패하면 원래대로 되돌린다.
+ */
 export function useUpdateMake() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<MakeInput> & { cover_photo_id?: string | null } }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: MakePatch }) => {
       const { error } = await requireSupabase().from('makes').update(patch).eq('id', id)
       if (error) throw error
     },
-    onSuccess: (_data, { id }) => {
+    onMutate: async ({ id, patch }) => {
+      await queryClient.cancelQueries({ queryKey: ['make', id] })
+      const previous = queryClient.getQueryData<MakeBundle | null>(['make', id])
+      if (previous) queryClient.setQueryData<MakeBundle | null>(['make', id], { ...previous, ...patch })
+      return { previous }
+    },
+    onError: (_error, { id }, context) => {
+      if (context?.previous) queryClient.setQueryData(['make', id], context.previous)
+    },
+    onSettled: (_data, _error, { id }) => {
       void queryClient.invalidateQueries({ queryKey: ['make', id] })
-      void queryClient.invalidateQueries({ queryKey: ['makes'] })
-      void queryClient.invalidateQueries({ queryKey: ['patterns'] })
+      // 목록은 지금 보고 있지 않으므로 다시 불러오지 않고 "오래됨"으로만 표시해 둔다. 다음에 열 때 새로 받는다.
+      void queryClient.invalidateQueries({ queryKey: ['makes'], refetchType: 'none' })
+      void queryClient.invalidateQueries({ queryKey: ['patterns'], refetchType: 'none' })
     },
   })
 }

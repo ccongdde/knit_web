@@ -27,7 +27,7 @@ export default function MakeRow({
   return (
     <Link to={`/makes/${make.id}`} className="flex items-start gap-3.5 border-t border-hair py-3">
       {coverUrl ? (
-        <img src={coverUrl} alt="" className="size-14 flex-none rounded-lg object-cover" />
+        <img src={coverUrl} alt="" loading="lazy" decoding="async" className="size-14 flex-none rounded-lg object-cover" />
       ) : (
         <PatternThumb title={`${patternTitle}${index}`} size={56} />
       )}

@@ -4,7 +4,8 @@ import {
   PDF_BUCKET,
   baseName,
   describeUploadError,
-  downloadBlob,
+  downloadPdfCached,
+  forgetCachedPdf,
   isPdf,
   ownedPath,
   removeFiles,
@@ -49,7 +50,7 @@ export function usePdfBlob(path: string | undefined) {
     enabled: Boolean(path),
     staleTime: Infinity,
     gcTime: 10 * 60_000,
-    queryFn: () => downloadBlob(PDF_BUCKET, path!),
+    queryFn: () => downloadPdfCached(path!),
   })
 }
 
@@ -128,6 +129,7 @@ export function useDeletePatternFile(patternId: string) {
       if (error) throw error
       // 기록이 먼저 지워진 뒤라 저장소 정리가 실패해도 화면에는 영향이 없다.
       await removeFiles(PDF_BUCKET, [file.storage_path]).catch(() => undefined)
+      await forgetCachedPdf(file.storage_path)
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['pattern_files', patternId] }),
   })

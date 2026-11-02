@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { wipeLocalData } from './queryClient'
 import { supabase } from './supabase'
 
 type AuthState = {
@@ -49,6 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       signOut: async () => {
         await supabase?.auth.signOut()
+        // 이 기기에 저장해 둔 화면과 사진도 함께 지운다.
+        await wipeLocalData()
       },
     }),
     [session, loading],

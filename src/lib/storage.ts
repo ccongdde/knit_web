@@ -69,8 +69,14 @@ export function baseName(filename: string): string {
   return filename.replace(/\.[^.]+$/, '')
 }
 
+/** 사진 임시 주소를 오래 쓰도록 7일로 만든다. (자주 새로 받지 않아도 되고, 저장해 둔 화면에서도 그대로 보인다.) */
+export const SIGNED_URL_SECONDS = 7 * 24 * 60 * 60
+
 export async function uploadFile(bucket: string, path: string, body: Blob, contentType: string) {
-  const { error } = await requireSupabase().storage.from(bucket).upload(path, body, { contentType, upsert: false })
+  // 파일 이름이 매번 새로 만들어져서 내용이 바뀌지 않으므로 오래 캐시해도 된다.
+  const { error } = await requireSupabase()
+    .storage.from(bucket)
+    .upload(path, body, { contentType, upsert: false, cacheControl: '31536000' })
   if (error) throw error
 }
 
@@ -86,11 +92,46 @@ export async function downloadBlob(bucket: string, path: string): Promise<Blob> 
   return data
 }
 
-/** 화면에 보여줄 임시 주소 (1시간) */
+/** 열어 본 PDF를 이 기기에 담아 두는 보관함 이름 */
+export const PDF_CACHE = 'pdf-files'
+const pdfCacheRequest = (path: string) => new Request(`/__pdf__/${path}`)
+
+/**
+ * PDF를 내려받되, 한 번 받은 것은 기기에 담아 두고 다음부터는 바로 연다.
+ * (큰 스캔본도 두 번째부터는 기다리지 않고, 인터넷이 없어도 열린다.)
+ */
+export async function downloadPdfCached(path: string): Promise<Blob> {
+  try {
+    const cache = await caches.open(PDF_CACHE)
+    const hit = await cache.match(pdfCacheRequest(path))
+    if (hit) return await hit.blob()
+  } catch {
+    // 보관함을 못 쓰는 환경이면 매번 내려받는다.
+  }
+  const blob = await downloadBlob(PDF_BUCKET, path)
+  try {
+    const cache = await caches.open(PDF_CACHE)
+    await cache.put(pdfCacheRequest(path), new Response(blob, { headers: { 'Content-Type': 'application/pdf' } }))
+  } catch {
+    // 용량이 모자라면 담지 않고 이번에만 보여준다.
+  }
+  return blob
+}
+
+export async function forgetCachedPdf(path: string) {
+  try {
+    const cache = await caches.open(PDF_CACHE)
+    await cache.delete(pdfCacheRequest(path))
+  } catch {
+    // 지울 것이 없다.
+  }
+}
+
+/** 화면에 보여줄 임시 주소 */
 export async function signedUrlMap(bucket: string, paths: string[]): Promise<Map<string, string>> {
   const unique = [...new Set(paths)]
   if (unique.length === 0) return new Map()
-  const { data, error } = await requireSupabase().storage.from(bucket).createSignedUrls(unique, 3600)
+  const { data, error } = await requireSupabase().storage.from(bucket).createSignedUrls(unique, SIGNED_URL_SECONDS)
   if (error) throw error
   const map = new Map<string, string>()
   for (const item of data ?? []) {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PlusIcon, SearchIcon } from '../components/icons'
 import PatternThumb from '../components/PatternThumb'
@@ -49,9 +49,11 @@ export default function PatternList() {
     }
     return result
   }, [items])
+  // 글자를 칠 때 입력칸은 바로 반응하고, 목록 걸러내기는 한 박자 뒤에 한다.
+  const deferredQuery = useDeferredValue(query)
   const visible = useMemo(
-    () => sortPatterns(filterPatterns(items, { query, status, tag }), sort),
-    [items, query, status, tag, sort],
+    () => sortPatterns(filterPatterns(items, { query: deferredQuery, status, tag }), sort),
+    [items, deferredQuery, status, tag, sort],
   )
   const { data: coverUrls } = usePhotoUrls(items.map(coverPathOf).filter((p): p is string => p !== null))
 

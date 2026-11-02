@@ -4,14 +4,15 @@ import type { MakeNeedle, MakeNeedleInput, MakeYarn, MakeYarnInput, Photo, WorkN
 
 // ───────────── 실 ─────────────
 
-export function useMakeYarns(makeId: string) {
+export function useMakeYarns(makeId: string | undefined) {
   return useQuery({
     queryKey: ['make_yarns', makeId],
+    enabled: Boolean(makeId),
     queryFn: async (): Promise<MakeYarn[]> => {
       const { data, error } = await requireSupabase()
         .from('make_yarns')
         .select('*')
-        .eq('make_id', makeId)
+        .eq('make_id', makeId!)
         .order('sort_order')
         .order('role', { ascending: false, nullsFirst: false })
       if (error) throw error
@@ -57,14 +58,15 @@ export function useDeleteMakeYarn(makeId: string) {
 
 // ───────────── 바늘 ─────────────
 
-export function useMakeNeedles(makeId: string) {
+export function useMakeNeedles(makeId: string | undefined) {
   return useQuery({
     queryKey: ['make_needles', makeId],
+    enabled: Boolean(makeId),
     queryFn: async (): Promise<MakeNeedle[]> => {
       const { data, error } = await requireSupabase()
         .from('make_needles')
         .select('*')
-        .eq('make_id', makeId)
+        .eq('make_id', makeId!)
         .order('sort_order')
       if (error) throw error
       return (data ?? []) as MakeNeedle[]

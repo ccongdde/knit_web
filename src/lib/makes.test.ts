@@ -10,6 +10,7 @@ import {
   statusPatch,
   sumGrams,
   todayIso,
+  validateDates,
 } from './makes'
 import type { Make, MakeNeedle } from './types'
 
@@ -49,6 +50,20 @@ describe('durationDays', () => {
   it('시작일이 없으면 null, 미래 시작일은 0', () => {
     expect(durationDays(null, null, '2025-10-31')).toBeNull()
     expect(durationDays('2025-12-01', null, '2025-10-31')).toBe(0)
+  })
+})
+
+describe('validateDates', () => {
+  it('완성일이 시작일보다 빠르면 안내 문구', () => {
+    expect(validateDates('2025-05-01', '2025-04-30')).toContain('빨라요')
+  })
+  it('같은 날이거나 나중이면 통과', () => {
+    expect(validateDates('2025-05-01', '2025-05-01')).toBeNull()
+    expect(validateDates('2025-05-01', '2025-06-01')).toBeNull()
+  })
+  it('한쪽이 비어 있으면 검사하지 않는다', () => {
+    expect(validateDates(null, '2025-05-01')).toBeNull()
+    expect(validateDates('2025-05-01', null)).toBeNull()
   })
 })
 

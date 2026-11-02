@@ -26,7 +26,8 @@ export function usePhotoUrls(paths: string[]) {
   return useQuery({
     queryKey: ['photo_urls', key],
     enabled: key.length > 0,
-    staleTime: 50 * 60_000,
+    // 임시 주소는 7일 동안 쓸 수 있어서 3일 동안은 다시 받지 않는다.
+    staleTime: 3 * 24 * 60 * 60_000,
     queryFn: () => signedUrlMap(PHOTO_BUCKET, key),
   })
 }

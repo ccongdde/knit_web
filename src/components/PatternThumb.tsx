@@ -4,7 +4,7 @@ import { swatchFor } from '../lib/patternList'
 export default function PatternThumb({ title, size = 52, src }: { title: string; size?: number; src?: string }) {
   const [main, light] = swatchFor(title)
   if (src) {
-    return <img src={src} alt="" className="flex-none rounded-lg object-cover" style={{ width: size, height: size }} />
+    return <img src={src} alt="" loading="lazy" decoding="async" className="flex-none rounded-lg object-cover" style={{ width: size, height: size }} />
   }
   return (
     <div

@@ -177,7 +177,7 @@ export default function NotesTab({ makeId }: { makeId: string }) {
                         className="size-16 overflow-hidden rounded-lg bg-surface"
                       >
                         {urls?.get(p.storage_path) && (
-                          <img src={urls.get(p.storage_path)} alt="" className="size-full object-cover" />
+                          <img src={urls.get(p.storage_path)} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
                         )}
                       </button>
                     ))}
