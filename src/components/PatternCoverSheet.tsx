@@ -118,7 +118,7 @@ export default function PatternCoverSheet({ pattern, onClose }: { pattern: Patte
     }
   }
 
-  const shownUrl = preview?.url ?? (pattern.cover_path ? currentUrls?.get(pattern.cover_path) : undefined)
+  const shownUrl = preview?.url ?? (pattern.cover_path ? currentUrls?.[pattern.cover_path] : undefined)
 
   return (
     <Sheet

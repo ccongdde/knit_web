@@ -28,10 +28,10 @@ export function useNeedles() {
 export function useYarnStock() {
   return useQuery({
     queryKey: ['yarn_stock'],
-    queryFn: async (): Promise<Map<string, YarnStock>> => {
+    queryFn: async (): Promise<Record<string, YarnStock>> => {
       const { data, error } = await requireSupabase().from('yarn_stock').select('*')
       if (error) throw error
-      return new Map(((data ?? []) as YarnStock[]).map((s) => [s.yarn_id, s]))
+      return Object.fromEntries(((data ?? []) as YarnStock[]).map((s) => [s.yarn_id, s]))
     },
   })
 }

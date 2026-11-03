@@ -15,7 +15,7 @@ export default function PhotoLightbox({
 }: {
   makeId: string
   photos: Photo[]
-  urls: Map<string, string>
+  urls: Record<string, string>
   startIndex: number
   coverId: string | null
   onClose: () => void
@@ -62,8 +62,8 @@ export default function PhotoLightbox({
       </div>
 
       <div className="relative flex min-h-0 flex-1 items-center justify-center">
-        {urls.get(photo.storage_path) ? (
-          <img src={urls.get(photo.storage_path)} alt={photo.caption || '제작 사진'} className="max-h-full max-w-full object-contain" />
+        {urls[photo.storage_path] ? (
+          <img src={urls[photo.storage_path]} alt={photo.caption || '제작 사진'} className="max-h-full max-w-full object-contain" />
         ) : (
           <p className="text-sm text-[#a8acb5]">사진을 불러오는 중…</p>
         )}

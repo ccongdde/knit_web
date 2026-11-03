@@ -4,6 +4,7 @@ import { ChevronLeftIcon, PlusIcon } from '../components/icons'
 import MakeRow from '../components/MakeRow'
 import PatternCoverSheet from '../components/PatternCoverSheet'
 import PatternThumb from '../components/PatternThumb'
+import SectionTitle from '../components/SectionTitle'
 import PatternFiles from '../components/PatternFiles'
 import { useMakes } from '../lib/queries/makes'
 import { usePattern } from '../lib/queries/patterns'
@@ -61,7 +62,7 @@ export default function PatternDetail() {
                 <PatternThumb
                   title={pattern.title}
                   size={84}
-                  src={pattern.cover_path ? ownCoverUrls?.get(pattern.cover_path) : undefined}
+                  src={pattern.cover_path ? ownCoverUrls?.[pattern.cover_path] : undefined}
                 />
                 <span className="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full bg-primary text-white shadow">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -87,9 +88,7 @@ export default function PatternDetail() {
 
             <section aria-labelledby="note" className="flex flex-col gap-2">
               <div className="flex items-baseline justify-between">
-                <h2 id="note" className="text-[13px] font-semibold text-muted">
-                  도안 메모
-                </h2>
+                <SectionTitle id="note">도안 메모</SectionTitle>
                 <span className="text-xs text-muted">모든 제작 기록이 함께 봐요</span>
               </div>
               <div className="rounded-xl bg-surface px-4 py-3.5 text-[15px] leading-relaxed whitespace-pre-wrap">
@@ -99,9 +98,7 @@ export default function PatternDetail() {
 
             {pattern.pattern_gauge && (
               <section aria-labelledby="gauge" className="flex items-center justify-between">
-                <h2 id="gauge" className="text-sm text-muted">
-                  도안 게이지
-                </h2>
+                <SectionTitle id="gauge">도안 게이지</SectionTitle>
                 <span className="text-[15px]">{pattern.pattern_gauge}</span>
               </section>
             )}
@@ -110,9 +107,9 @@ export default function PatternDetail() {
 
             <section aria-labelledby="makes" className="flex flex-col">
               <div className="mb-1 flex items-center justify-between">
-                <h2 id="makes" className="text-[13px] font-semibold text-muted">
-                  제작 기록 {makes?.length ?? 0}
-                </h2>
+                <SectionTitle id="makes" count={makes?.length ?? 0}>
+                  제작 기록
+                </SectionTitle>
                 <Link
                   to={`/patterns/${pattern.id}/makes/new`}
                   className="flex min-h-11 items-center gap-1 text-sm font-semibold text-primary"
@@ -131,7 +128,7 @@ export default function PatternDetail() {
                   make={m}
                   index={i}
                   patternTitle={pattern.title}
-                  coverUrl={m.cover ? coverUrls?.get(m.cover.thumb_path ?? m.cover.storage_path) : undefined}
+                  coverUrl={m.cover ? coverUrls?.[m.cover.thumb_path ?? m.cover.storage_path] : undefined}
                 />
               ))}
             </section>

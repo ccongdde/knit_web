@@ -127,15 +127,19 @@ export async function forgetCachedPdf(path: string) {
   }
 }
 
-/** 화면에 보여줄 임시 주소 */
-export async function signedUrlMap(bucket: string, paths: string[]): Promise<Map<string, string>> {
+/**
+ * 화면에 보여줄 임시 주소 (경로 → 주소).
+ * Map 이 아니라 일반 객체로 돌려준다. 이 값은 기기에 JSON 으로 저장되는데, Map 은 저장하면 빈 객체가 되어
+ * 앱을 껐다 켰을 때 "get 이 함수가 아니다" 오류로 화면이 멈추기 때문이다.
+ */
+export async function signedUrls(bucket: string, paths: string[]): Promise<Record<string, string>> {
   const unique = [...new Set(paths)]
-  if (unique.length === 0) return new Map()
+  if (unique.length === 0) return {}
   const { data, error } = await requireSupabase().storage.from(bucket).createSignedUrls(unique, SIGNED_URL_SECONDS)
   if (error) throw error
-  const map = new Map<string, string>()
+  const urls: Record<string, string> = {}
   for (const item of data ?? []) {
-    if (item.path && item.signedUrl) map.set(item.path, item.signedUrl)
+    if (item.path && item.signedUrl) urls[item.path] = item.signedUrl
   }
-  return map
+  return urls
 }

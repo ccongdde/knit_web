@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import PatternFiles from '../../components/PatternFiles'
+import SectionTitle from '../../components/SectionTitle'
 
 /** 제작 기록 안의 "도안" 탭: 도안 PDF와 도안 메모를 함께 보여준다. (올리기·수정은 도안 화면에서 한다.) */
 export default function PatternTab({
@@ -23,9 +24,7 @@ export default function PatternTab({
 
       <section aria-labelledby="pnote" className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between">
-          <h2 id="pnote" className="text-[13px] font-semibold text-muted">
-            도안 메모
-          </h2>
+          <SectionTitle id="pnote">도안 메모</SectionTitle>
           <Link to={`/patterns/${patternId}/edit`} className="flex min-h-11 items-center text-[13px] font-semibold text-primary">
             도안에서 수정
           </Link>

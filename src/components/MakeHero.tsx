@@ -62,8 +62,8 @@ export default function MakeHero({
               onClick={() => setViewer(i)}
               className="h-full w-full flex-none snap-center bg-surface"
             >
-              {urls?.get(p.storage_path) && (
-                <img src={urls.get(p.storage_path)} alt={p.caption || ''} className="h-full w-full object-cover" />
+              {urls?.[p.storage_path] && (
+                <img src={urls[p.storage_path]} alt={p.caption || ''} className="h-full w-full object-cover" />
               )}
             </button>
           ))}

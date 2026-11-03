@@ -6,7 +6,7 @@ import { PDF_CACHE } from './storage'
 export const CACHE_MAX_AGE = 3 * 24 * 60 * 60 * 1000
 export const PERSIST_KEY = 'knit.queryCache'
 /** 데이터 모양이 바뀌는 배포 때 올려서, 옛 모양으로 저장된 화면을 쓰지 않게 한다. */
-export const CACHE_BUSTER = 'v2'
+export const CACHE_BUSTER = 'v3'
 /** 서비스워커가 사진을 담아 두는 보관함 이름 (vite.config.ts 와 같아야 한다) */
 export const IMAGE_CACHE = 'photo-images'
 

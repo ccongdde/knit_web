@@ -18,8 +18,8 @@ const yarn = (over: Partial<Yarn>): Yarn => ({
   ...over,
 })
 
-const stockOf = (...rows: [string, number][]): Map<string, YarnStock> =>
-  new Map(rows.map(([id, left]) => [id, { yarn_id: id, grams_owned: 0, grams_used: 0, grams_left: left }]))
+const stockOf = (...rows: [string, number][]): Record<string, YarnStock> =>
+  Object.fromEntries(rows.map(([id, left]) => [id, { yarn_id: id, grams_owned: 0, grams_used: 0, grams_left: left }]))
 
 describe('남은 양', () => {
   it('사용 기록이 있으면 계산된 남은 양, 없으면 보유량', () => {

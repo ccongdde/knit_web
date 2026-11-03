@@ -34,7 +34,7 @@ export default function YarnSheet({
   const [note, setNote] = useState(yarn?.note ?? '')
   const [error, setError] = useState<string | null>(null)
 
-  const left = yarnId ? stock?.get(yarnId)?.grams_left : undefined
+  const left = yarnId ? stock?.[yarnId]?.grams_left : undefined
 
   function pickFromStock(id: string) {
     if (!id) {

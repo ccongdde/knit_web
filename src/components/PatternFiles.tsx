@@ -11,6 +11,7 @@ import {
 import type { PatternFile } from '../lib/types'
 import { Field, SheetActions, inputClass } from './Field'
 import { ChevronRightIcon, PlusIcon } from './icons'
+import SectionTitle from './SectionTitle'
 import Sheet from './Sheet'
 
 function FileIcon() {
@@ -58,9 +59,9 @@ export default function PatternFiles({
   return (
     <section aria-labelledby="pdfs" className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h2 id="pdfs" className="text-[13px] font-semibold text-muted">
-          도안 PDF {files?.length ?? 0}
-        </h2>
+        <SectionTitle id="pdfs" count={files?.length ?? 0}>
+          도안 PDF
+        </SectionTitle>
         {editable && (
           <>
             <button

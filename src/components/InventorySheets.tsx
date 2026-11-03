@@ -26,7 +26,7 @@ export function YarnInventorySheet({ yarn, onClose }: { yarn?: Yarn; onClose: ()
   const [note, setNote] = useState(yarn?.note ?? '')
   const [error, setError] = useState<string | null>(null)
 
-  const left = yarn ? stock?.get(yarn.id)?.grams_left : undefined
+  const left = yarn ? stock?.[yarn.id]?.grams_left : undefined
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { prepareImage } from '../image'
-import { PHOTO_BUCKET, MAX_UPLOAD_BYTES, ownedPath, removeFiles, signedUrlMap, uploadFile } from '../storage'
+import { PHOTO_BUCKET, MAX_UPLOAD_BYTES, ownedPath, removeFiles, signedUrls, uploadFile } from '../storage'
 import { requireSupabase } from '../supabase'
 import type { Photo } from '../types'
 
@@ -28,7 +28,7 @@ export function usePhotoUrls(paths: string[]) {
     enabled: key.length > 0,
     // 임시 주소는 7일 동안 쓸 수 있어서 3일 동안은 다시 받지 않는다.
     staleTime: 3 * 24 * 60 * 60_000,
-    queryFn: () => signedUrlMap(PHOTO_BUCKET, key),
+    queryFn: () => signedUrls(PHOTO_BUCKET, key),
   })
 }
 

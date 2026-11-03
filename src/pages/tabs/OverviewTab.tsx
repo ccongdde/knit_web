@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import NeedleSheet from '../../components/NeedleSheet'
+import SectionTitle from '../../components/SectionTitle'
 import YarnSheet from '../../components/YarnSheet'
 import YarnSwatch from '../../components/YarnSwatch'
 import { durationDays, formatGrams, sumGrams, todayIso, validateDates } from '../../lib/makes'
@@ -33,9 +34,9 @@ export default function OverviewTab({ make }: { make: Make }) {
   return (
     <div className="flex flex-col gap-6 px-5 pt-5 pb-6">
       <section aria-labelledby="schedule" className="flex flex-col">
-        <h2 id="schedule" className="mb-1.5 text-[13px] font-semibold text-muted">
+        <SectionTitle id="schedule" className="mb-1.5">
           일정
-        </h2>
+        </SectionTitle>
         <DateRow
           label="시작일"
           value={make.started_at}
@@ -60,9 +61,7 @@ export default function OverviewTab({ make }: { make: Make }) {
 
       <section aria-labelledby="yarns" className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
-          <h2 id="yarns" className="text-[13px] font-semibold text-muted">
-            실
-          </h2>
+          <SectionTitle id="yarns">실</SectionTitle>
           <button
             type="button"
             onClick={() => setEditing({ kind: 'yarn' })}
@@ -77,7 +76,7 @@ export default function OverviewTab({ make }: { make: Make }) {
           </p>
         )}
         {yarns?.map((y) => {
-          const left = y.yarn_id ? stock?.get(y.yarn_id)?.grams_left : undefined
+          const left = y.yarn_id ? stock?.[y.yarn_id]?.grams_left : undefined
           const sub = [y.color, y.fiber, y.weight_class].filter(Boolean).join(' · ')
           return (
             <button
@@ -115,9 +114,7 @@ export default function OverviewTab({ make }: { make: Make }) {
 
       <section aria-labelledby="needles" className="flex flex-col">
         <div className="mb-1 flex items-center justify-between">
-          <h2 id="needles" className="text-[13px] font-semibold text-muted">
-            바늘
-          </h2>
+          <SectionTitle id="needles">바늘</SectionTitle>
           <button
             type="button"
             onClick={() => setEditing({ kind: 'needle' })}
@@ -147,9 +144,7 @@ export default function OverviewTab({ make }: { make: Make }) {
 
       {make.review_note && (
         <section aria-labelledby="review" className="flex flex-col gap-2">
-          <h2 id="review" className="text-[13px] font-semibold text-muted">
-            완성 후기
-          </h2>
+          <SectionTitle id="review">완성 후기</SectionTitle>
           <div className="rounded-xl bg-surface px-4 py-3.5 text-[15px] leading-relaxed whitespace-pre-wrap">
             {make.review_note}
           </div>

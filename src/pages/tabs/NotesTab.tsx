@@ -176,8 +176,8 @@ export default function NotesTab({ makeId }: { makeId: string }) {
                         onClick={() => setViewer({ photos: notePhotos, index: pi })}
                         className="size-16 overflow-hidden rounded-lg bg-surface"
                       >
-                        {urls?.get(p.thumb_path ?? p.storage_path) && (
-                          <img src={urls.get(p.thumb_path ?? p.storage_path)} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+                        {urls?.[p.thumb_path ?? p.storage_path] && (
+                          <img src={urls[p.thumb_path ?? p.storage_path]} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
                         )}
                       </button>
                     ))}
